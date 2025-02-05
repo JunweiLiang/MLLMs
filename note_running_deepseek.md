@@ -57,7 +57,7 @@
     # https://github.com/deepseek-ai/DeepSeek-R1?tab=readme-ov-file#6-how-to-run-locally
 
     1. 安装SGLang
-        $ conda create -n deepseek
+        $ conda create -n deepseek python=3.10
         $ conda activate deepseek
             # 清华源： pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
         #  https://docs.sglang.ai/start/install.html
@@ -102,11 +102,19 @@
                 # 如果遇到 PermissionError: [Errno 13] Permission denied: ''
                     # 需要重新关闭screen，开一个新的screen再跑
 
+        # on machine4
+            # with sglang-0.4.2.post2
+
+            # need --mem-fraction-static 0.8 (default 0.9) to avoid OOM since desktop display takes some GPU memory
+            (deepseek) junweil@ai-precog-machine4:/mnt/ssd1/junweil/deepseek$ python -m sglang.launch_server --model-path models/DeepSeek-R1-Distill-Qwen-32B --tp 4 --enable-p2p-check --host 0.0.0.0 --port 6666 --trust-remote-code --enable-torch-compile --mem-fraction-static 0.8
+
+            # 41 token/s
+
         # 安装前端，我们使用Open WebUI，不然自己写程序测试也可以
             # Qwen2.5+vLLM+Open-WebUI 教程： https://jklincn.com/posts/qwen-vllm-deploy/
 
             # 需要起一个新环境，一个新的screen，Open-WebUI需要python3.11
-                $ conda create -n openweb python=3.11
+                $ con
                 $ conda activate openweb
                 $ python3 -m pip install open-webui
 
