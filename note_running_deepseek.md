@@ -24,6 +24,18 @@
 + 4卡L40=192GB
 + ARM系列，Orin NX 16 GB, Orin AGX 64 GB
 
+#### 速度测试总结
+
+| 短序列输入测试                                  |       |                  |           |          |               |                      |                      |
+| ---------------------------------------- | ----- | ---------------- | --------- | -------- | ------------- | -------------------- | -------------------- |
+| 模型                                       | 模型大小  | 测试机器             | 工具        | 是否开FP8推理 | 使用显存          | 回答延迟（第一个非思考的token时间） | 试过的最好的速度throughput   |
+| DeepSeek-R1-Distill-Qwen-32B             | 62GB  | 4x3090, 64核256GB | SGLang    | 否        | 22GB x4       | ~14秒                 | 40 token/s           |
+| DeepSeek-R1-Distill-Qwen-32B-Q8_0.gguf   | 33GB  | 4x3090, 64核256GB | llama.cpp | 否        | 10GB x4       | ~20秒                 | 21 token/s           |
+| DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf | 19GB  | 4x3090, 64核256GB | llama.cpp | 否        | 6GB x4        | ~20秒                 | 32 token/s           |
+|                                          |       | 4x3090, 64核256GB | llama.cpp | 否        | 21GBx1        | ~20秒                 | 26 token/s           |
+|                                          |       | 4x3090, 64核256GB | SGLang    | 否        | 22GB x4 这个很奇怪 | 0秒                   | 67 token/s，但是有可能胡言乱语 |
+| DeepSeek-R1-UD-IQ1_M                     | 158GB | 4x3090, 64核256GB | llama.cpp | 否        | 21GBx4        | ~180秒                | 3.2 token/s          |
+
 #### R1-Qwen-32B
 
 + 下载模型
@@ -120,7 +132,6 @@
 
                 (openweb) junweil@ai-precog-machine5:~$ export ENABLE_OLLAMA_API=False
                 (openweb) junweil@ai-precog-machine5:~$ export OPENAI_API_BASE_URL=http://127.0.0.1:6666/v1
-                (openweb) junweil@ai-precog-machine5:~$ export DEFAULT_MODELS="DeepSeek-R1-Distill-Qwen-32B"
                 (openweb) junweil@ai-precog-machine5:~$ open-webui serve
 
                     # first-time it will download some example models?
@@ -136,7 +147,60 @@
 
                     # --enable-torch-compile: 似乎快一些，throughput 37 -> 40
                         [2025-02-03 13:44:11 TP0] Decode batch. #running-req: 1, #token: 593, token usage: 0.01, gen throughput (token/s): 40.42, #queue-req: 0
+
+
+        # 用SGLang docker
+
+            $ sudo docker pull lmsysorg/sglang:latest
+
+            (base) junweil@ai-precog-machine5:~$ sudo docker run -it --shm-size=128g --gpus all --ipc=host -p 6666:6666 -v /mnt/ssd3/junweil/deepseek/:/deepseek lmsysorg/sglang:latest bash
+
+                # 报错： nvidia-container-cli: requirement error: unsatisfied condition: cuda>=12.5, please update your driver to a newer version,
+                # 意味着，这个docker image的cuda比物理机的cuda高，所以要把物理机器的driver和cuda升级一下
+
+                # 更新 nvidia-driver 550 -> 570, CUDA -> 12.8
+                $ sudo add-apt-repository ppa:graphics-drivers/ppa
+                $ sudo apt-get --purge remove nvidia-*
+                $ sudo apt-get --purge remove libnvidia-*
+                $ sudo ubuntu-drivers autoinstall
+
+                # then you might need to reinstall and restart docker
+
+                    $ sudo apt-get install nvidia-container-toolkit
+                    $ sudo systemctl daemon-reload
+                    $ sudo systemctl restart docker
+
+            # run again
+
+                # start docker
+                    (base) junweil@ai-precog-machine5:~$ sudo docker run -it --shm-size=128g --gpus all --ipc=host -p 6666:6666 -v /mnt/ssd3/junweil/deepseek/:/deepseek lmsysorg/sglang:latest bash
+
+                # run it in the docker container
+                    root@0a5a6ec82561:/deepseek/models/# python3 -m sglang.launch_server --model-path DeepSeek-R1-Distill-Qwen-32B-Q4_K_M --tp 4 --enable-p2p-check --host 0.0.0.0 --port 6666 --trust-remote-code
+
+
 ```
+
++ 用SGLang跑量化模型
+```
+    # DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf
+        (deepseek) junweil@ai-precog-machine5:/mnt/ssd3/junweil/deepseek/models$ python -m sglang.launch_server --model-path DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf --tp 4 --enable-p2p-check --host 0.0.0.0 --port 6666 --trust-remote-code --enable-torch-compile --mem-fraction-static 0.8 --quantization gguf
+
+            # --mem-fraction-static 0.9: OOM
+            # 占用显存： 22GB x4 ??
+
+            # 67 token/s
+
+            # 但是输出会有问题！可能会胡言乱语了
+
+    # DeepSeek-R1-UD-IQ1_M does not work yet
+        (deepseek) junweil@ai-precog-machine5:/mnt/ssd3/junweil/deepseek/models/DeepSeek-R1-UD-IQ1_M/DeepSeek-R1-UD-IQ1_M$ python -m sglang.launch_server --model-path DeepSeek-R1-UD-IQ1_M-00001-of-00004.gguf --tp 4 --enable-p2p-check --host 0.0.0.0 --port 6666
+        --trust-remote-code --mem-fraction-static 0.6 --quantization gguf
+
+    # 感觉跑量化模型，还是用llama.cpp更好
+
+```
+
 + 用llama.cpp跑量化模型 (ollama应该安装容易很多，但是也需要llama.cpp去把GGUF文件合并成一个)
 ```
     1. 安装
