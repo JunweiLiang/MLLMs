@@ -126,7 +126,7 @@
             # Qwen2.5+vLLM+Open-WebUI 教程： https://jklincn.com/posts/qwen-vllm-deploy/
 
             # 需要起一个新环境，一个新的screen，Open-WebUI需要python3.11
-                $ con
+                $ conda create -n openweb python=3.11
                 $ conda activate openweb
                 $ python3 -m pip install open-webui
 
