@@ -175,7 +175,7 @@
 
                     # first-time it will download some example models?
 
-                # 然后打开浏览器上 http://10.7.9.156:8080/ 就可以使用了
+                # 然后打开浏览器上 http://*.*.*.*:8080/ 就可以使用了
 
                 # 运行体验：
                     [2025-02-03 13:17:56 TP0] Decode batch. #running-req: 1, #token: 2179, token usage: 0.03, gen throughput (token/s): 36.82, #queue-req: 0
@@ -702,7 +702,7 @@
                      # start frontend on another machine
 
                         (openweb) junweil@home-lab:~$ export ENABLE_OLLAMA_API=False
-                        (openweb) junweil@home-lab:~$ export OPENAI_API_BASE_URL=http://10.13.11.212:8888/v1
+                        (openweb) junweil@home-lab:~$ export OPENAI_API_BASE_URL=http://*:8888/v1
                         (openweb) junweil@home-lab:~$ open-webui serve
 
         # 运行测试 - 14B模型:
