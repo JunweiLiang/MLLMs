@@ -37,7 +37,24 @@
             # 官方网页版可以直接用来测试，比7B好很多
                 # https://chat.qwenlm.ai/
 
+            # 图片理解能力很强，但是 Rs in strawberry回答错误
+
             # 4卡3090 OOM
+
+            # 4卡L40
+
+                (sglang) junweil@ai-precog-machine10:/mnt/ssd2/junweil/qwen$ python -m sglang.launch_server --model-path models/Qwen2.5-VL-72B-Instruct/ --tp 4 --enable-p2p-check --host 0.0.0.0 --port 7777 --trust-remote-code --chat-template qwen2-vl
+
+                # 使用41GBx4 显存
+                # 18 token/s, 未开 torch compile
+
+                # 02/21/2025，关闭了L40的ECC后
+
+                    $ export NCCL_P2P_DISABLE=1
+                    # 使用43 GBx4 显存
+
+                    # 19 token/s, 未开 torch compile
+
 
 
         # TODO, use GGUF quantized models
